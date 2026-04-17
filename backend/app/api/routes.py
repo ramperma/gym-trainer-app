@@ -8,12 +8,16 @@ from sqlalchemy.engine import Connection
 from app.core.config import settings
 from app.db import get_db_connection
 from app.models.exercise import Exercise
+from app.models.user_profile import UserProfileUpsert
 from app.models.workout_session import WorkoutSessionCreate
+from app.repositories import build_ai_status
 from app.repositories import create_workout_session as create_workout_session_in_db
 from app.repositories import get_exercise as get_exercise_from_db
+from app.repositories import get_user_profile as get_user_profile_from_db
 from app.repositories import get_workout_session as get_workout_session_from_db
 from app.repositories import list_exercises as list_exercises_from_db
 from app.repositories import list_workout_sessions as list_workout_sessions_from_db
+from app.repositories import upsert_user_profile as upsert_user_profile_in_db
 
 router = APIRouter(prefix="/api/v1")
 ui_router = APIRouter()
@@ -136,6 +140,36 @@ def create_workout_session(payload: WorkoutSessionCreate, connection: Connection
 
     session = create_workout_session_in_db(connection, payload)
     return {"ok": True, "data": session.model_dump(mode="json")}
+
+
+@router.get("/user-profile")
+def get_user_profile(connection: Connection = Depends(get_db_connection)) -> dict:
+    profile = get_user_profile_from_db(connection)
+    if profile is None:
+        profile = upsert_user_profile_in_db(connection, UserProfileUpsert(display_name=""))
+    return {"ok": True, "data": profile.model_dump(mode="json")}
+
+
+@router.put("/user-profile")
+def upsert_user_profile(payload: UserProfileUpsert, connection: Connection = Depends(get_db_connection)) -> dict:
+    profile = upsert_user_profile_in_db(connection, payload)
+    return {"ok": True, "data": profile.model_dump(mode="json")}
+
+
+@router.get("/ai/status")
+def get_ai_status(connection: Connection = Depends(get_db_connection)) -> dict:
+    profile = get_user_profile_from_db(connection)
+    personalization_ready = bool(
+        profile
+        and profile.ai_personalization_enabled
+        and any([profile.goal, profile.age, profile.weight_kg, profile.height_cm, profile.injuries, profile.medical_notes])
+    )
+    status = build_ai_status(
+        enabled=settings.ai_enabled,
+        provider=settings.ai_provider,
+        personalization_ready=personalization_ready,
+    )
+    return {"ok": True, "data": status.model_dump(mode="json")}
 
 
 @ui_router.get("/app", response_class=HTMLResponse)
