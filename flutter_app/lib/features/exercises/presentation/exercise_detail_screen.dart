@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/exercise_api.dart';
 import '../domain/exercise.dart';
+import '../../workout_sessions/data/workout_session_api.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
   final String exerciseId;
@@ -19,12 +20,46 @@ class ExerciseDetailScreen extends StatefulWidget {
 
 class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
   final _api = ExerciseApi();
+  final _sessionApi = WorkoutSessionApi();
   late Future<Exercise> _futureExercise;
+  bool _savingSession = false;
 
   @override
   void initState() {
     super.initState();
     _futureExercise = _api.fetchExerciseDetail(widget.exerciseId);
+  }
+
+  Future<void> _saveQuickSession(Exercise exercise) async {
+    setState(() {
+      _savingSession = true;
+    });
+
+    try {
+      final session = await _sessionApi.createQuickSession(
+        exerciseId: exercise.id,
+        setsCompleted: exercise.defaultSets,
+        repsCompleted: exercise.defaultReps,
+        notes: 'Guardada desde Flutter en Raspberry.',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sesión guardada: ${session.exerciseName}')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar la sesión: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _savingSession = false;
+        });
+      }
+    }
   }
 
   Future<void> _reload() async {
@@ -63,7 +98,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   children: [
                     const Icon(Icons.error_outline, size: 42),
                     const SizedBox(height: 12),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center),
+                    Text(snapshot.error.toString(),
+                        textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _reload,
@@ -89,16 +125,20 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(exercise.name, style: Theme.of(context).textTheme.headlineSmall),
+                      Text(exercise.name,
+                          style: Theme.of(context).textTheme.headlineSmall),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _InfoChip(label: 'Grupo', value: exercise.muscleGroup),
+                          _InfoChip(
+                              label: 'Grupo', value: exercise.muscleGroup),
                           _InfoChip(label: 'Nivel', value: exercise.difficulty),
                           _InfoChip(label: 'Equipo', value: exercise.equipment),
-                          _InfoChip(label: 'Series', value: exercise.defaultSets.toString()),
+                          _InfoChip(
+                              label: 'Series',
+                              value: exercise.defaultSets.toString()),
                           _InfoChip(label: 'Reps', value: exercise.defaultReps),
                         ],
                       ),
@@ -113,7 +153,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Descripción',
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text(exercise.description),
                     ],
@@ -127,11 +168,29 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Cómo hacerlo', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Cómo hacerlo',
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text(exercise.instructions),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed:
+                      _savingSession ? null : () => _saveQuickSession(exercise),
+                  icon: _savingSession
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                      _savingSession ? 'Guardando...' : 'Guardar sesión real'),
                 ),
               ),
             ],

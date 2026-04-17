@@ -1,4 +1,5 @@
 DROP TABLE IF EXISTS exercises;
+DROP TABLE IF EXISTS workout_sessions;
 
 CREATE TABLE exercises (
     id TEXT PRIMARY KEY,
@@ -10,6 +11,16 @@ CREATE TABLE exercises (
     instructions TEXT NOT NULL,
     default_sets INTEGER NOT NULL,
     default_reps TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE workout_sessions (
+    id TEXT PRIMARY KEY,
+    exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    performed_at TIMESTAMPTZ NOT NULL,
+    sets_completed INTEGER NOT NULL,
+    reps_completed TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -57,4 +68,22 @@ VALUES
         'Saca pecho, tira de la empuñadura hacia el ombligo y vuelve lento manteniendo hombros abajo.',
         3,
         '12-15'
+    );
+
+INSERT INTO workout_sessions (
+    id,
+    exercise_id,
+    performed_at,
+    sets_completed,
+    reps_completed,
+    notes
+)
+VALUES
+    (
+        'ws-seed-001',
+        'ex-001',
+        NOW() - INTERVAL '1 day',
+        4,
+        '10-12',
+        'Sesión inicial de ejemplo guardada desde seed.'
     );

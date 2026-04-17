@@ -1,6 +1,6 @@
 # Gym Trainer App
 
-Estado actual: vertical slice runnable con backend real en PostgreSQL y app Flutter preparada para lista + detalle.
+Estado actual: aplicación real arrancable en esta Raspberry, con backend FastAPI sobre PostgreSQL y Flutter compilando para Linux desktop.
 
 ## Decisión de repositorio
 Se publica como **monorepo**.
@@ -15,19 +15,26 @@ Referencia breve: `docs/repository-strategy.md`.
 - FastAPI con estructura modular por `app/`
 - Variables de entorno con `.env.example`
 - PostgreSQL real mediante SQLAlchemy + psycopg
+- Frontend web mínimo servido por FastAPI como fallback de inspección rápida
 - Endpoints:
-  - `GET /`
+  - `GET /` → redirige a `/app`
+  - `GET /app`
+  - `GET /app/exercises/{id}`
   - `GET /api/v1/health`
   - `GET /api/v1/exercises`
   - `GET /api/v1/exercises/{id}`
+  - `GET /api/v1/workout-sessions`
+  - `GET /api/v1/workout-sessions/{id}`
+  - `POST /api/v1/workout-sessions`
 - `docker-compose.yml` para levantar PostgreSQL local
 - `db/schema.sql` con tabla `exercises` y seed inicial con descripción, instrucciones y prescripción base
 
 ### Flutter (`flutter_app/`)
-- Skeleton de app con pantalla inicial útil
-- Llamada real al backend para lista y detalle de ejercicio
-- Lista, recarga manual, pull-to-refresh y navegación a detalle
-- Preparada para completar plataformas con `flutter create .`
+- App Flutter compilable en Linux desktop y Android
+- Lista real de ejercicios desde backend
+- Detalle real de ejercicio
+- Guardado real de sesión de entrenamiento y refresco automático de la lista
+- Historial visible de sesiones persistidas en PostgreSQL
 
 ## Estructura
 
@@ -61,6 +68,12 @@ Checks:
 make backend-check
 ```
 
+Demo web local:
+
+```bash
+xdg-open http://localhost:8000/app
+```
+
 Ejemplo manual:
 
 ```bash
@@ -69,35 +82,61 @@ curl http://localhost:8000/api/v1/exercises/ex-001
 
 ### Flutter
 
-Requiere Flutter SDK instalado en la máquina:
-
 ```bash
 cd flutter_app
-flutter create .
-flutter pub get
-flutter run --dart-define=API_BASE_URL=http://localhost:8000/api/v1
+PATH=/home/ramni/sdk/flutter/bin:$PATH flutter pub get
+PATH=/home/ramni/sdk/flutter/bin:$PATH flutter run -d linux --dart-define=API_BASE_URL=http://localhost:8000/api/v1
 ```
 
 Para Android Emulator:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+PATH=/home/ramni/sdk/flutter/bin:$PATH flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Build validada en esta Raspberry:
+
+```bash
+cd flutter_app
+PATH=/home/ramni/sdk/flutter/bin:$PATH flutter build linux --debug --dart-define=API_BASE_URL=http://localhost:8000/api/v1
+./build/linux/arm64/debug/bundle/gym_trainer_app
 ```
 
 ## Qué funciona ya
 - Backend sirviendo catálogo y detalle de ejercicios desde PostgreSQL real.
+- Backend sirviendo creación y lectura de sesiones de entrenamiento en PostgreSQL real.
+- Flutter compila en esta Raspberry para Linux desktop.
+- Flutter muestra catálogo, detalle y listado de sesiones guardadas.
+- Desde el detalle se puede guardar una sesión real y volver a verla en la pantalla inicial.
+- Frontend web visible en navegador dentro de la red local.
 - Healthcheck validando conexión a base de datos.
-- Seed inicial persistido con campos útiles para una pantalla de detalle.
-- Flutter preparado para mostrar datos reales y navegar de lista a detalle.
+- Seed inicial persistido para ejercicios y una sesión de ejemplo.
 - Make targets mínimos para levantar, resetear y comprobar el slice.
+
+## Cómo probar el flujo real mínimo
+
+1. Arranca backend si no está arriba: `make backend-run`
+2. Arranca Flutter Linux con el comando de arriba.
+3. En la app, toca un ejercicio.
+4. Pulsa **Guardar sesión real**.
+5. Vuelve atrás. La sesión aparece en **Sesiones guardadas**.
+
+También puedes validar por API:
+
+```bash
+curl http://localhost:8000/api/v1/workout-sessions
+curl -X POST http://localhost:8000/api/v1/workout-sessions \
+  -H 'Content-Type: application/json' \
+  -d '{"exercise_id":"ex-002","performed_at":"2026-04-17T15:00:00Z","sets_completed":4,"reps_completed":"8-10","notes":"Sesión real creada en validación."}'
+```
 
 ## Limitaciones reales ahora mismo
 - No hay auth ni usuarios todavía.
 - No hay tests automáticos aún.
-- En este entorno no está instalado Flutter SDK, así que no pude ejecutar `flutter create` ni `flutter run` aquí.
-- La recreación de esquema se apoya en `docker compose down -v` porque el init script de Postgres solo corre al crear el volumen.
+- La persistencia actual es single-user y sin planificación avanzada.
+- La recreación completa de esquema sigue siendo el camino más simple si se quiere resembrar la base desde cero.
 
 ## Siguiente paso recomendado
-1. Añadir entidad `workouts` y asignar ejercicios a una rutina del día.
-2. Crear login mock o sesión mínima.
-3. Montar CI básica para backend y lint Flutter.
+1. Añadir usuario/sesión real para no mezclar entrenamientos entre personas.
+2. Permitir crear una sesión con varios ejercicios en vez de una sola entrada rápida.
+3. Montar tests API + smoke test Flutter.
