@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/env.dart';
 import '../../../exercises/data/exercise_api.dart';
 import '../../../exercises/domain/exercise.dart';
+import '../../../exercises/presentation/exercise_detail_screen.dart';
 import 'widgets/status_banner.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,6 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
     await _futureExercises;
   }
 
+  void _openExercise(BuildContext context, Exercise exercise) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ExerciseDetailScreen(
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Esta base ya sirve para la siguiente fase: catálogo real desde PostgreSQL y app Flutter lista para crecer.',
+              'Ahora ya hay lista y detalle de ejercicios saliendo de PostgreSQL a través de FastAPI.',
             ),
             const SizedBox(height: 16),
             const _FeatureChecklist(),
@@ -91,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Card(
                             child: ListTile(
+                              onTap: () => _openExercise(context, exercise),
                               leading: CircleAvatar(
                                 child: Text(
                                   exercise.name.isNotEmpty
@@ -100,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               title: Text(exercise.name),
                               subtitle: Text('${exercise.muscleGroup} · ${exercise.difficulty}'),
-                              trailing: Text(exercise.equipment),
+                              trailing: const Icon(Icons.chevron_right),
                             ),
                           ),
                         ),
@@ -130,9 +143,9 @@ class _FeatureChecklist extends StatelessWidget {
             Text('Estado del vertical slice'),
             SizedBox(height: 12),
             _ChecklistItem(text: 'FastAPI conectado a PostgreSQL'),
-            _ChecklistItem(text: 'Seed inicial disponible en la base de datos'),
-            _ChecklistItem(text: 'Flutter carga y refresca catálogo'),
-            _ChecklistItem(text: 'Base preparada para detalle/login en siguiente iteración'),
+            _ChecklistItem(text: 'Seed inicial con metadatos y prescripción básica'),
+            _ChecklistItem(text: 'Flutter carga catálogo y navega a detalle real'),
+            _ChecklistItem(text: 'Base preparada para rutina o login en siguiente iteración'),
           ],
         ),
       ),

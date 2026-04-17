@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 from app.core.config import settings
 from app.db import get_db_connection
+from app.repositories import get_exercise as get_exercise_from_db
 from app.repositories import list_exercises as list_exercises_from_db
 
 router = APIRouter(prefix="/api/v1")
@@ -24,3 +25,12 @@ def healthcheck(connection: Connection = Depends(get_db_connection)) -> dict:
 def list_exercises(connection: Connection = Depends(get_db_connection)) -> dict:
     exercises = list_exercises_from_db(connection)
     return {"ok": True, "data": [exercise.model_dump() for exercise in exercises]}
+
+
+@router.get("/exercises/{exercise_id}")
+def get_exercise(exercise_id: str, connection: Connection = Depends(get_db_connection)) -> dict:
+    exercise = get_exercise_from_db(connection, exercise_id)
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+    return {"ok": True, "data": exercise.model_dump()}
