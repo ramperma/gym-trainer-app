@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 const _FeatureChecklist(),
                 const SizedBox(height: 16),
-                const StatusBanner(apiBaseUrl: Env.apiBaseUrl),
+                StatusBanner(apiBaseUrl: Env.apiBaseUrl),
                 const SizedBox(height: 16),
                 Text(
                   'Sesiones guardadas',
