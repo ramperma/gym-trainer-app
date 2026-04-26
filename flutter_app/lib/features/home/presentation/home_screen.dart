@@ -10,6 +10,7 @@ import '../../profile/presentation/profile_screen.dart';
 import '../../workout_sessions/data/workout_session_api.dart';
 import '../../workout_sessions/domain/workout_session.dart';
 import '../../workout_sessions/presentation/workout_history_screen.dart';
+import '../../profile/presentation/ai_trainer_screen.dart';
 import 'widgets/status_banner.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -70,6 +71,12 @@ class _HomeScreenState extends State<HomeScreen> {
     await _reload();
   }
 
+  Future<void> _openAiTrainer() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const AiTrainerScreen()),
+    );
+  }
+
   void _openProfileTab() {
     setState(() => _selectedIndex = 1);
   }
@@ -78,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Gym overview' : 'Perfil'),
+        title: Text(_selectedIndex == 0 ? 'Inicio' : 'Perfil'),
         actions: _selectedIndex == 0
             ? [
                 IconButton(
@@ -116,162 +123,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
 
-                final recentExercises = data.exercises.take(3).toList();
-                final recentSessions = data.sessions.take(3).toList();
-
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   children: [
-                    _HeroPanel(
-                      profile: data.profile,
-                      exercisesCount: data.exercises.length,
-                      sessionsCount: data.sessions.length,
+                    Text(
+                      'Opciones de inicio',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Accesos directos a las secciones principales.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    _SectionCard(
+                    _HomeOptionCard(
                       title: 'Entrenamientos',
-                      subtitle:
-                          'Catálogo real conectado a backend y acceso rápido a ejercicios.',
+                      subtitle: '${data.exercises.length} ejercicios disponibles',
                       icon: Icons.fitness_center,
-                      actionLabel: 'Ver catálogo',
-                      onAction: _openExerciseCatalog,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _MetricPill(
-                                label: 'Ejercicios activos',
-                                value: '${data.exercises.length}',
-                              ),
-                              _MetricPill(
-                                label: 'Última sesión',
-                                value: data.sessions.isEmpty
-                                    ? 'Sin registrar'
-                                    : recentSessions.first.exerciseName,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          if (recentExercises.isEmpty)
-                            const Text('No hay ejercicios cargados todavía.')
-                          else
-                            ...recentExercises.map(
-                              (exercise) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _CompactListItem(
-                                  icon: Icons.sports_gymnastics,
-                                  title: exercise.name,
-                                  subtitle:
-                                      '${exercise.muscleGroup} · ${exercise.difficulty}',
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                      onTap: _openExerciseCatalog,
                     ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Historial y seguimiento',
-                      subtitle:
-                          'Resumen corto de actividad y acceso al historial completo.',
-                      icon: Icons.query_stats,
-                      actionLabel: 'Ver historial',
-                      onAction: _openHistory,
-                      child: recentSessions.isEmpty
-                          ? const Text('Todavía no hay sesiones guardadas.')
-                          : Column(
-                              children: recentSessions
-                                  .map(
-                                    (session) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: _CompactListItem(
-                                        icon: Icons.history,
-                                        title: session.exerciseName,
-                                        subtitle:
-                                            '${session.setsCompleted} series · ${session.repsCompleted} reps · ${_formatDate(session.performedAt)}',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
+                    const SizedBox(height: 10),
+                    _HomeOptionCard(
+                      title: 'Personal Trainer',
+                      subtitle: 'Crea entrenamientos personalizados con IA',
+                      icon: Icons.person_pin,
+                      onTap: _openAiTrainer,
                     ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Perfil y salud',
-                      subtitle:
-                          'Datos útiles para personalización, seguridad y contexto de entrenamiento.',
-                      icon: Icons.favorite_outline,
-                      actionLabel: 'Abrir perfil',
-                      onAction: _openProfileTab,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _MetricPill(
-                                label: 'Objetivo',
-                                value: _goalLabel(data.profile.goal),
-                              ),
-                              _MetricPill(
-                                label: 'Peso',
-                                value: data.profile.weightKg == null
-                                    ? 'Pendiente'
-                                    : '${data.profile.weightKg!.toStringAsFixed(1)} kg',
-                              ),
-                              _MetricPill(
-                                label: 'Lesiones',
-                                value: data.profile.injuries.isEmpty
-                                    ? 'No indicadas'
-                                    : 'Revisar',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            data.profile.displayName.isEmpty
-                                ? 'Completa tu perfil para mejorar recomendaciones y contexto.'
-                                : 'Perfil listo para ${data.profile.displayName}. Puedes ajustar objetivo, lesiones y personalización.',
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 10),
+                    _HomeOptionCard(
+                      title: 'Historial',
+                      subtitle: '${data.sessions.length} sesiones registradas',
+                      icon: Icons.history,
+                      onTap: _openHistory,
                     ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'IA / Coach',
-                      subtitle:
-                          'Estado real de backend y espacio reservado para recomendaciones guiadas.',
-                      icon: Icons.smart_toy_outlined,
-                      actionLabel: 'Configurar perfil',
-                      onAction: _openProfileTab,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _AiCoachSummary(status: data.aiStatus),
-                          const SizedBox(height: 12),
-                          const _ComingSoonTile(
-                            title: 'Plan diario generado',
-                            subtitle:
-                                'Pendiente para la siguiente iteración cuando existan recomendaciones accionables.',
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const _SectionCard(
-                      title: 'Nutrición',
-                      subtitle:
-                          'Bloque funcional preparado para integrar comidas, macros y adherencia.',
+                    const SizedBox(height: 10),
+                    _HomeOptionCard(
+                      title: 'Nutricion',
+                      subtitle: data.aiStatus.personalizationReady
+                          ? 'Tu perfil ya esta listo para sugerencias personalizadas'
+                          : 'Completa tu perfil para personalizar recomendaciones',
                       icon: Icons.restaurant_menu,
-                      child: _ComingSoonTile(
-                        title: 'Módulo en preparación',
-                        subtitle:
-                            'Reservado sin romper la UX. Se activará cuando haya backend y flujos reales.',
-                      ),
+                      onTap: _openProfileTab,
                     ),
                     const SizedBox(height: 16),
                     StatusBanner(apiBaseUrl: Env.apiBaseUrl),
@@ -304,16 +196,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _formatDate(DateTime value) {
-    return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}';
-  }
-
   String _goalLabel(String? goal) {
     switch (goal) {
       case 'perder_grasa':
         return 'Perder grasa';
       case 'ganar_musculo':
-        return 'Ganar músculo';
+        return 'Ganar musculo';
       case 'mantener':
         return 'Mantener';
       case 'rendimiento':
@@ -340,337 +228,65 @@ class _HomeData {
   });
 }
 
-class _HeroPanel extends StatelessWidget {
-  final UserProfile profile;
-  final int exercisesCount;
-  final int sessionsCount;
-
-  const _HeroPanel({
-    required this.profile,
-    required this.exercisesCount,
-    required this.sessionsCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primaryContainer,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hola${profile.displayName.isEmpty ? '' : ', ${profile.displayName}'}',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Home reorganizada por funciones de producto para entrar rápido a lo importante.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.92),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _HeroStat(
-                  label: 'Ejercicios',
-                  value: '$exercisesCount',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _HeroStat(
-                  label: 'Sesiones',
-                  value: '$sessionsCount',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroStat extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _HeroStat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onPrimary.withValues(alpha: 0.9),
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
+class _HomeOptionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final Widget child;
-  final String? actionLabel;
-  final VoidCallback? onAction;
+  final VoidCallback onTap;
 
-  const _SectionCard({
+  const _HomeOptionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.child,
-    this.actionLabel,
-    this.onAction,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onPrimaryContainer,
-                  child: Icon(icon),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(subtitle),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            child,
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.tonalIcon(
-                  onPressed: onAction,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: Text(actionLabel!),
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                child: Icon(icon),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right),
             ],
-          ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _MetricPill extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _MetricPill({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompactListItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _CompactListItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-            foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-            child: Icon(icon, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 2),
-                Text(subtitle),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AiCoachSummary extends StatelessWidget {
-  final AiStatus status;
-
-  const _AiCoachSummary({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final readyColor = status.enabled ? Colors.green : Colors.orange;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.circle, size: 14, color: readyColor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  status.enabled
-                      ? 'Coach backend disponible'
-                      : 'Coach pendiente de configuración',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Proveedor: ${status.provider}. ${status.personalizationReady ? 'El perfil ya aporta contexto.' : 'Faltan más datos de perfil para personalizar mejor.'}',
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ComingSoonTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _ComingSoonTile({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.schedule),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(subtitle),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Chip(label: Text('Próximamente')),
-        ],
       ),
     );
   }
