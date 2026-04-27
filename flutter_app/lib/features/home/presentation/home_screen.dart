@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/env.dart';
 import '../../exercises/data/exercise_api.dart';
 import '../../exercises/domain/exercise.dart';
-import '../../exercises/presentation/exercise_catalog_screen.dart';
 import '../../profile/data/profile_api.dart';
 import '../../profile/domain/user_profile.dart';
 import '../../profile/presentation/ai_trainer_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../workout_sessions/data/workout_session_api.dart';
 import '../../workout_sessions/domain/workout_session.dart';
+import '../../workout_sessions/presentation/training_hub_screen.dart';
 import '../../workout_sessions/presentation/workout_history_screen.dart';
 import 'widgets/status_banner.dart';
 
@@ -57,13 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await _futureHomeData;
   }
 
-  Future<void> _openExerciseCatalog() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ExerciseCatalogScreen()),
-    );
-    await _reload();
-  }
-
   Future<void> _openHistory() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const WorkoutHistoryScreen()),
@@ -77,15 +70,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openProfileTab() {
+  void _openTrainingTab() {
     setState(() => _selectedIndex = 1);
+  }
+
+  void _openProfileTab() {
+    setState(() => _selectedIndex = 2);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Dashboard' : 'Perfil'),
+        title: Text(
+          switch (_selectedIndex) {
+            0 => 'Dashboard',
+            1 => 'Entrenamientos',
+            _ => 'Perfil',
+          },
+        ),
         actions: _selectedIndex == 0
             ? [
                 IconButton(
@@ -145,11 +148,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 14),
                     _HomeOptionCard(
                       title: 'Entrenamientos',
-                      subtitle:
-                          '${data.exercises.length} ejercicios en catálogo',
+                      subtitle: 'Planes por cuerpo, objetivo y nivel',
                       icon: Icons.fitness_center,
                       accent: const Color(0xFF1363DF),
-                      onTap: _openExerciseCatalog,
+                      onTap: _openTrainingTab,
                     ),
                     const SizedBox(height: 10),
                     _HomeOptionCard(
@@ -184,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+          const TrainingHubScreen(),
           const ProfileScreen(),
         ],
       ),
@@ -197,6 +200,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Inicio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.fitness_center_outlined),
+            selectedIcon: Icon(Icons.fitness_center),
+            label: 'Entreno',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
