@@ -6,11 +6,11 @@ import '../../exercises/domain/exercise.dart';
 import '../../exercises/presentation/exercise_catalog_screen.dart';
 import '../../profile/data/profile_api.dart';
 import '../../profile/domain/user_profile.dart';
+import '../../profile/presentation/ai_trainer_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../workout_sessions/data/workout_session_api.dart';
 import '../../workout_sessions/domain/workout_session.dart';
 import '../../workout_sessions/presentation/workout_history_screen.dart';
-import '../../profile/presentation/ai_trainer_screen.dart';
 import 'widgets/status_banner.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -85,13 +85,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Inicio' : 'Perfil'),
+        title: Text(_selectedIndex == 0 ? 'Dashboard' : 'Perfil'),
         actions: _selectedIndex == 0
             ? [
                 IconButton(
                   onPressed: _reload,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Recargar inicio',
+                  tooltip: 'Actualizar datos',
                 ),
               ]
             : null,
@@ -124,45 +124,57 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 32),
                   children: [
+                    _HeroPanel(
+                      profileName: data.profile.displayName,
+                      exerciseCount: data.exercises.length,
+                      sessionCount: data.sessions.length,
+                      aiReady: data.aiStatus.personalizationReady,
+                    ),
+                    const SizedBox(height: 18),
                     Text(
-                      'Opciones de inicio',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      'Accesos rápidos',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Accesos directos a las secciones principales.',
+                      'Organiza entreno, progreso y personalización desde una sola vista.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _HomeOptionCard(
                       title: 'Entrenamientos',
-                      subtitle: '${data.exercises.length} ejercicios disponibles',
+                      subtitle:
+                          '${data.exercises.length} ejercicios en catálogo',
                       icon: Icons.fitness_center,
+                      accent: const Color(0xFF1363DF),
                       onTap: _openExerciseCatalog,
                     ),
                     const SizedBox(height: 10),
                     _HomeOptionCard(
-                      title: 'Personal Trainer',
-                      subtitle: 'Crea entrenamientos personalizados con IA',
-                      icon: Icons.person_pin,
+                      title: 'Personal Trainer IA',
+                      subtitle: 'Genera plan diario, semanal o mensual',
+                      icon: Icons.auto_awesome,
+                      accent: const Color(0xFF1A9D8C),
                       onTap: _openAiTrainer,
                     ),
                     const SizedBox(height: 10),
                     _HomeOptionCard(
                       title: 'Historial',
                       subtitle: '${data.sessions.length} sesiones registradas',
-                      icon: Icons.history,
+                      icon: Icons.query_stats,
+                      accent: const Color(0xFFEE7A23),
                       onTap: _openHistory,
                     ),
                     const SizedBox(height: 10),
                     _HomeOptionCard(
-                      title: 'Nutricion',
+                      title: 'Nutrición y perfil',
                       subtitle: data.aiStatus.personalizationReady
-                          ? 'Tu perfil ya esta listo para sugerencias personalizadas'
-                          : 'Completa tu perfil para personalizar recomendaciones',
-                      icon: Icons.restaurant_menu,
+                          ? 'Perfil listo para recomendaciones personalizadas'
+                          : 'Completa tu perfil para activar personalización',
+                      icon: Icons.person,
+                      accent: const Color(0xFF8D5DDB),
                       onTap: _openProfileTab,
                     ),
                     const SizedBox(height: 16),
@@ -195,22 +207,132 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  String _goalLabel(String? goal) {
-    switch (goal) {
-      case 'perder_grasa':
-        return 'Perder grasa';
-      case 'ganar_musculo':
-        return 'Ganar musculo';
-      case 'mantener':
-        return 'Mantener';
-      case 'rendimiento':
-        return 'Rendimiento';
-      case 'salud_general':
-        return 'Salud general';
-      default:
-        return 'Pendiente';
-    }
+class _HeroPanel extends StatelessWidget {
+  final String profileName;
+  final int exerciseCount;
+  final int sessionCount;
+  final bool aiReady;
+
+  const _HeroPanel({
+    required this.profileName,
+    required this.exerciseCount,
+    required this.sessionCount,
+    required this.aiReady,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = profileName.trim().isEmpty ? 'Atleta' : profileName.trim();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F2747), Color(0xFF1E4F8A)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x25122A48),
+            blurRadius: 22,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hola, $name',
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Control total de tu progreso con métricas claras y sesiones guardadas.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFFD8E6F8),
+                ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricBadge(
+                  icon: Icons.fitness_center,
+                  label: 'Ejercicios',
+                  value: '$exerciseCount',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MetricBadge(
+                  icon: Icons.bolt,
+                  label: 'Sesiones',
+                  value: '$sessionCount',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MetricBadge(
+                  icon: Icons.smart_toy,
+                  label: 'IA',
+                  value: aiReady ? 'Lista' : 'Parcial',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _MetricBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFFE7F2FF)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFFDFECFB),
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -232,12 +354,14 @@ class _HomeOptionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final Color accent;
   final VoidCallback onTap;
 
   const _HomeOptionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.accent,
     required this.onTap,
   });
 
@@ -246,22 +370,32 @@ class _HomeOptionCard extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                child: Icon(icon),
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [accent.withValues(alpha: 0.95), accent],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.arrow_outward, color: Colors.white),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -270,9 +404,7 @@ class _HomeOptionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -282,8 +414,15 @@ class _HomeOptionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F5FB),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.chevron_right),
+              ),
             ],
           ),
         ),

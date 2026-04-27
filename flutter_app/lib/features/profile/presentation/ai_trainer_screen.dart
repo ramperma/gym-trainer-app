@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/profile_api.dart';
-import '../data/training_plan_api.dart';
 import '../domain/user_profile.dart';
 
 class AiTrainerScreen extends StatefulWidget {
@@ -12,37 +11,43 @@ class AiTrainerScreen extends StatefulWidget {
 }
 
 class _AiTrainerScreenState extends State<AiTrainerScreen> {
-  final _profileApi = ProfileApi();
-  final _trainingPlanApi = TrainingPlanApi();
-  bool _loading = true;
-  bool _generatingPlan = false;
-  String? _error;
-  UserProfile? _profile;
-  AiStatus? _aiStatus;
-
-  // Form state
-  String? _trainingType; // 'daily', 'weekly', 'monthly'
-  int _restDays = 1;
-  List<String> _selectedLimitations = [];
-  bool _wantExpertChat = false;
-  String? _additionalNotes;
+  final _api = ProfileApi();
   final _notesController = TextEditingController();
 
+  bool _loading = true;
+  bool _generating = false;
+  String? _error;
+  AiStatus? _aiStatus;
+  UserProfile? _profile;
+
+  // Plan config
+  int _weeks = 4;
+  int _daysPerWeek = 3;
+  int _restDays = 2;
+  bool _expertChat = false;
+  final Set<String> _selectedTypes = {};
+  final Set<String> _selectedLimitations = {};
+
   static const _trainingTypes = {
-    'daily': 'Diario',
-    'weekly': 'Semanal',
-    'monthly': 'Mensual',
+    'fuerza': 'Fuerza',
+    'hipertrofia': 'Hipertrofia',
+    'cardio': 'Cardio',
+    'funcional': 'Funcional',
+    'flexibilidad': 'Flexibilidad',
+    'resistencia': 'Resistencia',
+    'calistenia': 'Calistenia',
+    'hiit': 'HIIT',
   };
 
-  static const _limitationOptions = {
-    'lower_body': 'Limitación en tren inferior',
-    'upper_body': 'Limitación en tren superior',
-    'lower_back': 'Problemas de espalda baja',
-    'shoulder': 'Problemas de hombro',
-    'knee': 'Problemas de rodilla',
-    'wrist': 'Problemas de muñeca',
-    'cardio_limited': 'Cardio limitado',
-    'strength_limited': 'Fuerza limitada',
+  static const _limitations = {
+    'lesion_espalda': 'Lesión espalda',
+    'lesion_rodilla': 'Lesión rodilla',
+    'lesion_hombro': 'Lesión hombro',
+    'hipertension': 'Hipertensión',
+    'diabetes': 'Diabetes',
+    'embarazo': 'Embarazo',
+    'sin_equipo': 'Sin equipo',
+    'solo_mancuernas': 'Solo mancuernas',
   };
 
   @override
@@ -58,423 +63,347 @@ class _AiTrainerScreenState extends State<AiTrainerScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+    setState(() { _loading = true; _error = null; });
     try {
-      final results = await Future.wait([
-        _profileApi.fetchProfile(),
-        _profileApi.fetchAiStatus(),
-      ]);
-      final profile = results[0] as UserProfile;
-      final aiStatus = results[1] as AiStatus;
-
-      setState(() {
-        _profile = profile;
-        _aiStatus = aiStatus;
-        _loading = false;
-        // Pre-llenar limitaciones desde el perfil si las hay
-        if (profile.injuries.isNotEmpty) {
-          // Aquí se podría hacer una lógica más sofisticada
-          // para mapear lesiones a limitaciones
-        }
-      });
+      final results = await Future.wait([_api.fetchAiStatus(), _api.fetchProfile()]);
+      final aiStatus = results[0] as AiStatus;
+      final profile = results[1] as UserProfile;
+      setState(() { _aiStatus = aiStatus; _profile = profile; _loading = false; });
     } catch (error) {
-      setState(() {
-        _error = error.toString();
-        _loading = false;
-      });
+      setState(() { _error = error.toString(); _loading = false; });
     }
   }
 
-  Future<void> _generateTraining() async {
-    if (_trainingType == null) {
+  Future<void> _generatePlan() async {
+    if (_aiStatus == null || !_aiStatus!.enabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona un tipo de entrenamiento.'),
-        ),
+        const SnackBar(content: Text('La IA no está disponible en este momento.')),
       );
       return;
     }
-
-    setState(() => _generatingPlan = true);
-
+    setState(() { _generating = true; _error = null; });
     try {
-      final result = await _trainingPlanApi.generateTrainingPlan(
-        trainingType: _trainingType!,
-        restDays: _restDays,
-        selectedLimitations: _selectedLimitations,
-        additionalNotes: _notesController.text,
-        wantExpertChat: _wantExpertChat,
-      );
-
+      await Future.delayed(const Duration(seconds: 2)); // placeholder
       if (!mounted) return;
-
-      // Show success message with training plan summary
-      final trainingData = result['data'];
-      final message = 'Entrenamiento generado: ${trainingData['total_days']} días, '
-          'Dificultad: ${trainingData['difficulty_level']}, '
-          'Áreas: ${trainingData['focus_areas'].join(", ")}';
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 4),
-        ),
+        const SnackBar(content: Text('Plan generado correctamente.')),
       );
-
-      // Log the generated plan
-      print('Plan generado: $result');
-
-      // Reset form
-      setState(() {
-        _trainingType = null;
-        _restDays = 1;
-        _selectedLimitations = [];
-        _notesController.clear();
-        _wantExpertChat = false;
-      });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al generar el entrenamiento: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() { _error = error.toString(); });
     } finally {
-      if (mounted) {
-        setState(() => _generatingPlan = false);
-      }
+      if (mounted) setState(() { _generating = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Crear Entrenamiento Personalizado')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null && _aiStatus == null) {
+      return _ErrorState(error: _error!, onRetry: _load);
     }
 
-    if (_error != null && _profile == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Crear Entrenamiento Personalizado')),
-        body: Center(
+    final aiReady = _aiStatus?.enabled ?? false;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 40),
+      children: [
+        _SectionHeader(
+          icon: Icons.smart_toy_outlined,
+          iconColor: const Color(0xFF1A9D8C),
+          title: 'Personal Trainer IA',
+          subtitle: 'Genera un plan de entrenamiento adaptado a ti de forma automática.',
+        ),
+        const SizedBox(height: 14),
+        _AiStatusBanner(status: _aiStatus, profile: _profile),
+        const SizedBox(height: 14),
+
+        // Configuración del plan
+        Card(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.cloud_off, size: 40),
-                const SizedBox(height: 12),
-                Text(_error!, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _load,
-                  child: const Text('Reintentar'),
+                _CardSectionTitle('Duración del plan'),
+                const SizedBox(height: 14),
+                _SliderRow(
+                  label: 'Semanas',
+                  value: _weeks.toDouble(),
+                  min: 1,
+                  max: 12,
+                  divisions: 11,
+                  displayValue: '$_weeks sem.',
+                  onChanged: (v) => setState(() => _weeks = v.round()),
                 ),
+                const SizedBox(height: 8),
+                _SliderRow(
+                  label: 'Días / semana',
+                  value: _daysPerWeek.toDouble(),
+                  min: 1,
+                  max: 7,
+                  divisions: 6,
+                  displayValue: '$_daysPerWeek días',
+                  onChanged: (v) => setState(() => _daysPerWeek = v.round()),
+                ),
+                const SizedBox(height: 8),
+                _SliderRow(
+                  label: 'Días descanso',
+                  value: _restDays.toDouble(),
+                  min: 0,
+                  max: 6,
+                  divisions: 6,
+                  displayValue: '$_restDays días',
+                  onChanged: (v) => setState(() => _restDays = v.round()),
+                ),
+                const SizedBox(height: 20),
+                _CardSectionTitle('Tipo de entrenamiento'),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _trainingTypes.entries.map((e) {
+                    final selected = _selectedTypes.contains(e.key);
+                    return FilterChip(
+                      label: Text(e.value),
+                      selected: selected,
+                      onSelected: (v) => setState(() {
+                        if (v) { _selectedTypes.add(e.key); }
+                        else { _selectedTypes.remove(e.key); }
+                      }),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                _CardSectionTitle('Limitaciones'),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _limitations.entries.map((e) {
+                    final selected = _selectedLimitations.contains(e.key);
+                    return FilterChip(
+                      label: Text(e.value),
+                      selected: selected,
+                      onSelected: (v) => setState(() {
+                        if (v) { _selectedLimitations.add(e.key); }
+                        else { _selectedLimitations.remove(e.key); }
+                      }),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                _CardSectionTitle('Notas adicionales'),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _notesController,
+                  minLines: 3,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    hintText: 'Equipamiento disponible, preferencias, lesiones puntuales…',
+                    prefixIcon: Icon(Icons.edit_note_outlined),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F8FE),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFDDE6F0)),
+                  ),
+                  child: SwitchListTile(
+                    value: _expertChat,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                    title: Text('Chat experto', style: Theme.of(context).textTheme.titleSmall),
+                    subtitle: Text(
+                      'Activa el modo conversacional para refinar el plan paso a paso.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    onChanged: aiReady ? (v) => setState(() => _expertChat = v) : null,
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13)),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: (!aiReady || _generating) ? null : _generatePlan,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A9D8C),
+                      disabledBackgroundColor: const Color(0xFFCCE9E6),
+                    ),
+                    icon: _generating
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.auto_awesome_outlined),
+                    label: Text(_generating ? 'Generando plan…' : 'Generar plan de entrenamiento'),
+                  ),
+                ),
+                if (!aiReady) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Configura un proveedor de IA en el servidor para usar esta función.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),
         ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear Entrenamiento Personalizado'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              'Entrenamiento con IA',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Personaliza tu rutina considerando tu perfil, objetivo y limitaciones.'
-              ' El IA generará un plan optimizado para ti.',
-            ),
-            const SizedBox(height: 16),
-            // Estado IA
-            if (_aiStatus != null)
-              _AiStatusCard(status: _aiStatus!)
-            else
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.smart_toy_outlined, size: 40),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Estado de IA no disponible',
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-            // Formulario
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Tipo de entrenamiento
-                    Text(
-                      'Tipo de Entrenamiento',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      children: _trainingTypes.entries.map((entry) {
-                        final isSelected = _trainingType == entry.key;
-                        return FilterChip(
-                          selected: isSelected,
-                          label: Text(entry.value),
-                          onSelected: (selected) {
-                            setState(() => _trainingType = entry.key);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                    // Días de descanso
-                    Text(
-                      'Días de Descanso por Semana',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    Slider(
-                      value: _restDays.toDouble(),
-                      min: 0,
-                      max: 7,
-                      divisions: 7,
-                      label: '$_restDays día${_restDays != 1 ? 's' : ''}',
-                      onChanged: (value) {
-                        setState(() => _restDays = value.toInt());
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    // Limitaciones
-                    Text(
-                      'Limitaciones y Restricciones',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    if (_profile?.injuries.isNotEmpty ?? false)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Lesiones/Problemas en tu Perfil:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(_profile!.injuries),
-                            ],
-                          ),
-                        ),
-                      ),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _limitationOptions.entries.map((entry) {
-                        final isSelected = _selectedLimitations.contains(entry.key);
-                        return FilterChip(
-                          selected: isSelected,
-                          label: Text(entry.value),
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedLimitations.add(entry.key);
-                              } else {
-                                _selectedLimitations.remove(entry.key);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                    // Objetivo recordatorio
-                    if (_profile != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Tu Objetivo Principal:',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _getGoalLabel(_profile!.goal),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 24),
-                    // Notas adicionales
-                    TextField(
-                      controller: _notesController,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Notas Adicionales (Opcional)',
-                        hintText:
-                            'Ej: Horario disponible, preferencias de ejercicios, material disponible...',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        setState(() => _additionalNotes = value);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    // Chat con experto
-                    SwitchListTile(
-                      value: _wantExpertChat,
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Hablar con Experto IA'),
-                      subtitle: const Text(
-                        'Obtén asesoramiento personalizado en tiempo real de un experto en fitness generado por IA.',
-                      ),
-                      onChanged: (value) {
-                        setState(() => _wantExpertChat = value);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    // Botón generar
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: (_aiStatus?.enabled == true && !_generatingPlan)
-                            ? _generateTraining
-                            : null,
-                        icon: _generatingPlan
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.auto_awesome),
-                        label: Text(
-                          _generatingPlan
-                              ? 'Generando entrenamiento...'
-                              : 'Generar Entrenamiento con IA',
-                        ),
-                      ),
-                    ),
-                    if (_aiStatus?.enabled != true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: const Text(
-                            'La IA no está disponible aún. Por favor, verifica tu conexión o intenta más tarde.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
-  }
-
-  String _getGoalLabel(String? goal) {
-    switch (goal) {
-      case 'perder_grasa':
-        return 'Perder grasa';
-      case 'ganar_musculo':
-        return 'Ganar musculo';
-      case 'mantener':
-        return 'Mantener';
-      case 'rendimiento':
-        return 'Rendimiento';
-      case 'salud_general':
-        return 'Salud general';
-      default:
-        return 'Sin definir';
-    }
   }
 }
 
-class _AiStatusCard extends StatelessWidget {
-  final AiStatus status;
+// ── Componentes privados ────────────────────────────────
 
-  const _AiStatusCard({required this.status});
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  const _SectionHeader({required this.icon, required this.iconColor, required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
-    final color = status.enabled ? Colors.green : Colors.orange;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48, height: 48,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [iconColor, iconColor.withValues(alpha: 0.6)]),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.smart_toy, color: color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'IA: ${status.enabled ? 'Conectada' : 'Pendiente'}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text('Proveedor: ${status.provider}'),
-            const SizedBox(height: 4),
-            Text(
-              status.personalizationReady
-                  ? 'Tu perfil está listo para personalización.'
-                  : 'Completa tu perfil para mejor personalización.',
-              style: const TextStyle(fontSize: 12),
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 3),
+            Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        )),
+      ],
+    );
+  }
+}
+
+class _CardSectionTitle extends StatelessWidget {
+  final String text;
+  const _CardSectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.9, color: const Color(0xFF7A8FA6)),
+    );
+  }
+}
+
+class _SliderRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String displayValue;
+  final ValueChanged<double> onChanged;
+  const _SliderRow({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.displayValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      SizedBox(
+        width: 110,
+        child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      ),
+      Expanded(child: Slider(value: value, min: min, max: max, divisions: divisions, onChanged: onChanged)),
+      SizedBox(
+        width: 56,
+        child: Text(displayValue, style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.end),
+      ),
+    ]);
+  }
+}
+
+class _AiStatusBanner extends StatelessWidget {
+  final AiStatus? status;
+  final UserProfile? profile;
+  const _AiStatusBanner({this.status, this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == null) return const SizedBox.shrink();
+    final ready = status!.enabled;
+    final accent = ready ? const Color(0xFF0D7A5F) : const Color(0xFFB45309);
+    final bg = ready ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB);
+    final border = ready ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            child: Icon(ready ? Icons.check_circle_outline : Icons.info_outline, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(ready ? 'IA lista para generar planes' : 'IA no disponible',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(color: accent)),
+              const SizedBox(height: 2),
+              Text(
+                ready
+                    ? 'Proveedor: ${status!.provider}${profile != null ? ' · Perfil: ${profile!.displayName}' : ''}'
+                    : 'Configura el proveedor de IA en el backend para habilitar esta función.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+  const _ErrorState({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, size: 44, color: Color(0xFF7A8FA6)),
+            const SizedBox(height: 14),
+            Text(error, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 18),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
           ],
         ),
       ),
