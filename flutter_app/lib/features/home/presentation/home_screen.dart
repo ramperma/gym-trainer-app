@@ -64,10 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await _reload();
   }
 
-  Future<void> _openAiTrainer() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AiTrainerScreen()),
-    );
+  void _openAiTrainerTab() {
+    setState(() => _selectedIndex = 3);
   }
 
   void _openTrainingTab() {
@@ -86,7 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
           switch (_selectedIndex) {
             0 => 'Dashboard',
             1 => 'Entrenamientos',
-            _ => 'Perfil',
+            2 => 'Perfil',
+            _ => 'Personal Trainer IA',
           },
         ),
         actions: _selectedIndex == 0
@@ -159,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       subtitle: 'Genera plan diario, semanal o mensual',
                       icon: Icons.auto_awesome,
                       accent: const Color(0xFF1A9D8C),
-                      onTap: _openAiTrainer,
+                      onTap: _openAiTrainerTab,
                     ),
                     const SizedBox(height: 10),
                     _HomeOptionCard(
@@ -188,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const TrainingHubScreen(),
           const ProfileScreen(),
+          const AiTrainerScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -210,6 +210,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Perfil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'IA',
           ),
         ],
       ),
